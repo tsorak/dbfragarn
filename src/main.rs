@@ -1,5 +1,5 @@
 use sqlx::mysql::MySqlPoolOptions;
-use std::{env, process};
+use std::{env, error::Error, process};
 
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error> {
@@ -17,17 +17,40 @@ async fn main() -> Result<(), sqlx::Error> {
         .connect(&db_url)
         .await?;
 
-    // Make a simple query
-    let query = "SELECT 1+1";
+    let mut query = String::new();
+    loop {
+        match get_term_input() {
+            Ok(s) => {
+                query = s;
+            }
+            Err(e) => eprintln!("Error: {}", e),
+        }
 
-    println!("{}", query);
+        let row = sqlx::query(&query)
+            // .bind(150_i64)
+            .fetch_one(&pool)
+            .await?;
 
-    let row: (i32,) = sqlx::query_as(query)
-        // .bind(150_i64)
-        .fetch_one(&pool)
-        .await?;
+        println!("{:#?}", row);
+    }
+}
 
-    println!("{:#?}", row);
+fn get_term_input() -> Result<String, Box<dyn Error>> {
+    use std::io::{stdin, stdout, Write};
+    let mut s = String::new();
+    print!("Please enter some text: ");
+    let _ = stdout().flush();
+    match stdin().read_line(&mut s) {
+        Ok(_) => {
+            if let Some('\n') = s.chars().next_back() {
+                s.pop();
+            }
+            if let Some('\r') = s.chars().next_back() {
+                s.pop();
+            }
+        }
+        Err(_) => (),
+    }
 
-    Ok(())
+    Ok(s)
 }
