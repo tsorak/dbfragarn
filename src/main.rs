@@ -12,10 +12,13 @@ async fn main() -> Result<(), sqlx::Error> {
         }
     };
     // Create a connection pool
+    clear_term();
+    println!("Connecting...");
     let pool = MySqlPoolOptions::new()
         .max_connections(5)
         .connect(&db_url)
         .await?;
+    clear_term();
 
     let mut query = String::new();
     loop {
@@ -38,7 +41,7 @@ async fn main() -> Result<(), sqlx::Error> {
 fn get_term_input() -> Result<String, Box<dyn Error>> {
     use std::io::{stdin, stdout, Write};
     let mut s = String::new();
-    print!("Please enter some text: ");
+    print!("mysql> ");
     let _ = stdout().flush();
     match stdin().read_line(&mut s) {
         Ok(_) => {
@@ -53,4 +56,8 @@ fn get_term_input() -> Result<String, Box<dyn Error>> {
     }
 
     Ok(s)
+}
+
+fn clear_term() -> () {
+    print!("{esc}[2J{esc}[1;1H", esc = 27 as char);
 }
