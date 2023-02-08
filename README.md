@@ -11,7 +11,7 @@ URL=mysql://USERNAME:PASSWORD@HOST/DATABASE cargo r
 ## TODO
 
 - [ ] Load URL from .env file
-- [ ] More structured table output
+- [x] More structured table output
 - [ ] Commands history (Queries & Responses)
 - [ ] Multiline query support? (add ';' requirement)
 - [ ] Colors?
