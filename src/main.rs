@@ -57,7 +57,7 @@ async fn main() -> Result<(), sqlx::Error> {
 fn get_term_input() -> Result<String, Box<dyn Error>> {
     use std::io::{stdin, stdout, Write};
     let mut s = String::new();
-    print!("mysql> ");
+    print!("dbfragarn> ");
     let _ = stdout().flush();
     match stdin().read_line(&mut s) {
         Ok(_) => {

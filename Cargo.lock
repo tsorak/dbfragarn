@@ -159,6 +159,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "dbfragarn"
+version = "0.1.0"
+dependencies = [
+ "sqlx",
+ "tokio",
+]
+
+[[package]]
 name = "der"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -912,14 +920,6 @@ dependencies = [
  "itertools",
  "nom",
  "unicode_categories",
-]
-
-[[package]]
-name = "sqlquerier"
-version = "0.1.0"
-dependencies = [
- "sqlx",
- "tokio",
 ]
 
 [[package]]
