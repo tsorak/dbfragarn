@@ -1,4 +1,4 @@
-use sqlx::mysql::MySqlPoolOptions;
+use sqlx::{self, Column, Row};
 use std::{env, error::Error, process};
 
 #[tokio::main]
@@ -14,7 +14,7 @@ async fn main() -> Result<(), sqlx::Error> {
     // Create a connection pool
     clear_term();
     println!("Connecting...");
-    let pool = MySqlPoolOptions::new()
+    let pool = sqlx::mysql::MySqlPoolOptions::new()
         .max_connections(5)
         .connect(&db_url)
         .await?;
@@ -29,12 +29,28 @@ async fn main() -> Result<(), sqlx::Error> {
             Err(e) => eprintln!("Error: {}", e),
         }
 
-        let row = sqlx::query(&query)
-            // .bind(150_i64)
-            .fetch_one(&pool)
-            .await?;
-
-        println!("{:#?}", row);
+        sqlx::query(&query)
+            .fetch_all(&pool)
+            .await
+            .map(|rows| {
+                for row in rows {
+                    row.columns().iter().for_each(|col| {
+                        let i = col.ordinal();
+                        let val: String = match row.try_get(i) {
+                            Ok(v) => v,
+                            Err(_) => match row.try_get::<i32, _>(i) {
+                                Ok(v) => v.to_string(),
+                                Err(e) => {
+                                    dbg!(e);
+                                    String::from("(parse error)")
+                                }
+                            },
+                        };
+                        println!("{}", val);
+                    })
+                }
+            })
+            .unwrap();
     }
 }
 
