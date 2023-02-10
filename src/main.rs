@@ -193,6 +193,14 @@ fn draw_header(titles: &HashMap<usize, Tablecol>) -> () {
 
         print!("|");
     }
+
+    print!("\n-");
+
+    let total_table_width: i8 = titles.iter().map(|col| col.1.display_width + 3).sum();
+    for _ in 0..total_table_width {
+        print!("-");
+    }
+
     print!("\n");
 }
 
