@@ -45,6 +45,10 @@ async fn main() -> Result<(), sqlx::Error> {
 }
 
 fn handle_query_ok(row_vec: Vec<MySqlRow>) -> () {
+    if row_vec.len() == 0 {
+        return;
+    }
+
     let mut header_data: HashMap<usize, Tablecol> = row_vec
         .first()
         .unwrap()
