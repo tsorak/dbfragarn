@@ -1,5 +1,5 @@
-use sqlx::{self, mysql::MySqlRow, Column, Row};
-use std::{collections::HashMap, env, error::Error, process};
+use sqlx::{self, mysql::MySqlRow, Column, Row, TypeInfo};
+use std::{collections::HashMap, env, error::Error, fs, process};
 
 #[derive(Debug)]
 struct Tablecol {
@@ -9,14 +9,8 @@ struct Tablecol {
 
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error> {
-    let db_url = match env::var("URL") {
-        Ok(v) => String::from(v),
-        Err(_) => {
-            println!("Please assign a URL environment variable.");
-            println!("Template URL: 'mysql://USERNAME:PASSWORD@HOST/DATABASE'");
-            process::exit(1);
-        }
-    };
+    let db_url = get_database_url();
+
     // Create a connection pool
     clear_term();
     println!("Connecting...");
@@ -41,6 +35,39 @@ async fn main() -> Result<(), sqlx::Error> {
                 dbg!(e);
             } //handle_query_err(e),
         }
+    }
+}
+
+fn get_database_url() -> String {
+    fn get_env_var() -> String {
+        match fs::read_to_string(".env") {
+            Ok(v) => {
+                let v = v.replace(r#"""#, "");
+                let pairs: Vec<Vec<&str>> = v
+                    .split("\n")
+                    .map(|pair| pair.split("=").collect::<Vec<&str>>())
+                    .collect();
+
+                let url = match pairs.iter().find(|k| k[0] == "URL") {
+                    Some(v) => v[1].to_owned(),
+                    _ => "".to_owned(),
+                };
+
+                dbg!(&url);
+
+                url
+            }
+            _ => {
+                println!("Please assign a URL environment variable.");
+                println!("Template URL: 'mysql://USERNAME:PASSWORD@HOST/DATABASE'");
+                process::exit(1);
+            }
+        }
+    }
+
+    match env::var("URL") {
+        Ok(v) => String::from(v),
+        _ => get_env_var(),
     }
 }
 
@@ -84,61 +111,27 @@ fn handle_query_ok(row_vec: Vec<MySqlRow>) -> () {
         .collect();
 
     draw_table(header_data, body_data);
-
-    // match row_vec.map(|rows| {
-    //     //Table header
-
-    //     //Table body
-    //     let mut body_data: Vec<Vec<String>> = Vec::new();
-    //     for row in &rows {
-    //         let mut row_data: Vec<String> = Vec::new();
-    //         row.columns().iter().for_each(|col| {
-    //             let col_id = col.ordinal();
-    //             let val: String = match row.try_get(col_id) {
-    //                 Ok(v) => v,
-    //                 Err(_) => match row.try_get::<i32, _>(col_id) {
-    //                     Ok(v) => v.to_string(),
-    //                     Err(_e) => {
-    //                         dbg!(_e);
-    //                         String::from("(parse error)")
-    //                     }
-    //                 },
-    //             };
-
-    //             row_data.push(val.clone());
-    //             // print!("{} ", val);
-    //             //increase column display_width if needed
-    //             if val.chars().count() as i8 > header_data.get(&col_id).unwrap().display_width {
-    //                 header_data.entry(col_id).and_modify(|e| {
-    //                     e.display_width = val.chars().count() as i8;
-    //                 });
-    //             }
-    //         });
-    //         body_data.push(row_data);
-    //     }
-
-    //     //render
-    //     draw_header(&header_data);
-    //     for row in body_data {
-    //         draw_body_row(&row, &header_data);
-    //         print!("\n");
-    //     }
-    // }) {
-    //     Ok(_) => (),
-    //     Err(e) => {
-    //         dbg!(e);
-    //     }
-    // };
 }
 
 fn get_parsed_row_value(i: usize, row: &MySqlRow) -> String {
     match row.column(i).type_info().to_string().as_str() {
-        "CHAR" | "VARCHAR" => row.get::<String, _>(i),
-        "INT" | "BIGINT" => row.get::<i32, _>(i).to_string(),
-        "TEXT" => row
-            .try_get::<String, _>(i)
+        "CHAR" | "VARCHAR" | "ENUM" => row
+            .try_get_unchecked::<String, _>(i)
             .unwrap_or_else(|_| "NULL".to_string()),
-        b => format!("[{b}]"),
+        "INT" | "BIGINT" => row
+            .try_get_unchecked::<i32, _>(i)
+            .unwrap_or_else(|_| -1)
+            .to_string(),
+        "TEXT" => row
+            .try_get_unchecked::<String, _>(i)
+            .unwrap_or_else(|_| "NULL".to_string()),
+        _ => {
+            if row.column(i).type_info().is_null() {
+                "NULL".to_owned()
+            } else {
+                row.column(i).type_info().name().to_owned()
+            }
+        }
     }
 }
 
